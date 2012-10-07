@@ -1,0 +1,125 @@
+#!/bin/bash
+
+# Marmoset test runner. Details: https://github.com/andryunin/marmoset
+
+# Settings =====================================================================
+
+# C compiler command and options
+CC="gcc"
+CFLAGS=
+
+# Tests location
+TEST_DIR=$(cd -P $( dirname "${BASH_SOURCE[0]}" ) && pwd )
+
+# Path of marmoset.c -- marmoset source file
+MARMOSET_C=$TEST_DIR/marmoset.c
+
+# Path to place temporary executable file
+TEMP_FILE=$TEST_DIR/.test
+
+# Path to place full testing log.
+TEST_LOG=/dev/null
+
+# Internal =====================================================================
+
+TEST_TEMPLATE=$(cat <<'TEST_TEMPLATE_EOF'
+//! Line starts with "//@ filename" will be replaced with content of file
+//! "filename" while building
+//@ src/t.c
+TEST_TEMPLATE_EOF
+)
+
+# Routines =====================================================================
+
+# Prints script usage information
+function usage {
+    echo "Usage: $0 generate filename.c # Generate test file" >&2
+    echo "       $0 test filename.c     # Run specified test" >&2
+    echo "       $0                     # Run all test"       >&2
+}
+
+# Printing messages and writing to log file
+function message { echo $* > tee $TEST_LOG; }
+
+function message_success {
+    echo -e "\033[32m$*\033[39m\033[49m"; # Print green
+    echo $* >>$TEST_LOG
+} 
+
+function message_failure {
+    echo -e "\033[31m$*\033[39m\033[49m"; # Print red
+    echo $* >>$TEST_LOG
+}
+
+# Internal error
+# Params: $1 - error message [optional]
+function error {
+    [[ -z $1 ]] && MESSAGE="unknown error" || MESSAGE=$1
+    message_failure "Marmoset internal error:" $MESSAGE
+    exit 1
+}
+
+# Compile test file
+# Params: $1 - source file path
+#         $2 - result file path
+# Return: compiler exit status
+function test_compile {
+    $CC $CFLAGS -DMARMOSET=\"$MARMOSET_C\" -DMARMOSET_FILENAME=\"$1\" $1 -o $2
+    return $?
+}
+
+# Compile and run test file
+# Params: $1 - source file path
+#         $2 - result file path
+# Return: if success then 0, else 1
+function test_run {
+    PATH_SOURCE=$1
+    PATH_RESULT=$2
+
+    # Output test result and cleaning up
+    # Params: $1 - status: "succ" | "fail"
+    #         $2 - message [optional]
+    function test_end {
+        if [ $1 == 'succ' ]; then
+            MESSAGE_FUNC=message_success
+            MESSAGE_DEFAULT="Succeed: $PATH_SOURCE"
+        else
+            MESSAGE_FUNC=message_failure
+            MESSAGE_DEFAULT="Failed: $PATH_SOURCE"
+        fi
+
+        [[ $2 ]] && MESSAGE=$2 || MESSAGE=$MESSAGE_DEFAULT
+
+        rm -f $PATH_RESULT
+        $MESSAGE_FUNC $MESSAGE
+    }
+
+    if ! test_compile $PATH_SOURCE $PATH_RESULT; then
+        test_end fail "Compilation failed: $PATH_SOURCE" && return $?
+    else
+        ($2 && test_end succ || test_end fail ) && return $?
+    fi
+}
+
+# Choose action ################################################################
+
+case $1 in
+    "g"|"generate")
+        [ ! -w $2 ] && echo "$TEST_TEMPLATE" >$2 || message_failure "Writing error"
+        ;;
+    "t"|"test")
+        test_run $2 $TEMP_FILE
+        exit $?
+        ;;
+    "")
+        ERROR_COUNT=0
+        for f in $TEST_DIR/*.c ; do
+            [[ "$f" != "$MARMOSET_C" ]] && test_run $f $TEMP_FILE
+            ERROR_COUNT=$(($ERROR_COUNT + $?))
+        done
+        exit $STATUS
+        ;;
+    *)
+        usage
+        exit 1;
+esac

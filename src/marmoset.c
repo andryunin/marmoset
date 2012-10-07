@@ -30,22 +30,22 @@ unsigned int _m_pending_count = 0;
     } while(0)
 
 
-#define _m_report_success(value, comment, ...)    \
-    do {                                          \
-        ++_m_success_count;                       \
-        _m_msg(_M_GREEN, "- success: ");          \
-        _m_msg(_M_GREEN, comment, ##__VA_ARGS__); \
-        _m_msg(_M_GREEN, "\n");                   \
+#define _m_report_success(value, assert_mark, comment, ...) \
+    do {                                                    \
+        ++_m_success_count;                                 \
+        _m_msg(_M_GREEN, "- success: ");                    \
+        _m_msg(_M_GREEN, comment, ##__VA_ARGS__);           \
+        _m_msg(_M_GREEN, "\n");                             \
     } while(0)
 
 
-#define _m_report_failure(value, comment, ...)       \
-    do {                                             \
-        ++_m_failure_count;                          \
-        _m_msg(_M_RED, "- failure: ");               \
-        _m_msg(_M_RED, comment, ##__VA_ARGS__);      \
-        _m_msg(_M_RED, "\n     code: %s\n", #value); \
-        _m_msg(_M_RED, "\n");                        \
+#define _m_report_failure(value, assert_mark, comment, ...)          \
+    do {                                                             \
+        ++_m_failure_count;                                          \
+        _m_msg(_M_RED, "- failure: ");                               \
+        _m_msg(_M_RED, comment, ##__VA_ARGS__);                      \
+        _m_msg(_M_RED, "\n     code: (%s) %s", #value, assert_mark); \
+        _m_msg(_M_RED, "\n");                                        \
     } while(0)
 
 
@@ -62,6 +62,7 @@ unsigned int _m_pending_count = 0;
     int main(int argc, char *argv[]) {     \
         printf("start: %s\n", suite_name);
 
+
 #define endsuite                                       \
         if (_m_success_count > 0)                      \
             printf("Succeed: %d\n", _m_success_count); \
@@ -72,14 +73,25 @@ unsigned int _m_pending_count = 0;
         return _m_failure_count;                       \
     }
 
-#define assert0(value, comment, ...)                          \
-    do {                                                      \
-        if ((value) == 0) {                                   \
-            _m_report_success(value, comment, ##__VA_ARGS__); \
-        } else {                                              \
-            _m_report_failure(value, comment, ##__VA_ARGS__); \
-        }                                                     \
+#define assert0(value, comment, ...)                                  \
+    do {                                                              \
+        if ((value) == 0) {                                           \
+            _m_report_success(value, "== 0", comment, ##__VA_ARGS__); \
+        } else {                                                      \
+            _m_report_failure(value, "== 0", comment, ##__VA_ARGS__); \
+        }                                                             \
     } while(0)
+
+
+#define assertN0(value, comment, ...)                                 \
+    do {                                                              \
+        if ((value) != 0) {                                           \
+            _m_report_success(value, "!= 0", comment, ##__VA_ARGS__); \
+        } else {                                                      \
+            _m_report_failure(value, "!= 0", comment, ##__VA_ARGS__); \
+        }                                                             \
+    } while(0)
+
 
 #define pending(comment, ...)                      \
     do {                                           \

@@ -12,43 +12,50 @@ enum m_state {
     M_SUCCESS, M_FAILURE, M_PENDING
 };
 
-unsigned int _m_succeed_count = 0;
-unsigned int _m_failed_count  = 0;
+unsigned int _m_success_count = 0;
+unsigned int _m_failure_count  = 0;
 unsigned int _m_pending_count = 0;
 
 
-void message_success(const char *format, ...)
-{
-    va_list ap;
+#define _M_RED    31
+#define _M_GREEN  32
+#define _M_YELLOW 33
 
-    va_start(ap, format);
-    printf("\033[32m");         /* Set green text color */
-    vprintf(format, ap);        /* Print message */
-    printf("\033[39m\033[49m"); /* Reset color */
-    va_end(ap);
-}
 
-void message_failure(const char *format, ...)
-{
-    va_list ap;
+#define _m_msg(color, format, ...)                    \
+    do {                                              \
+        printf("\033[%dm", color);  /* set color */   \
+        printf(format, ##__VA_ARGS__);                \
+        printf("\033[39m\033[49m"); /* reset color */ \
+    } while(0)
 
-    va_start(ap, format);
-    printf("\033[31m");         /* Set red text color */
-    vprintf(format, ap);        /* Print message */
-    printf("\033[39m\033[49m"); /* Reset color */
-    va_end(ap);
-}
 
-void message_pending(const char *format, ...)
-{
-    va_list ap;
+#define _m_report_success(value, comment, ...)    \
+    do {                                          \
+        ++_m_success_count;                       \
+        _m_msg(_M_GREEN, "- success: ");          \
+        _m_msg(_M_GREEN, comment, ##__VA_ARGS__); \
+        _m_msg(_M_GREEN, "\n");                   \
+    } while(0)
 
-    va_start(ap, format);
-    printf("\033[33m");         /* Set yellow text color */
-    vprintf(format, ap);        /* Print message */
-    printf("\033[39m\033[49m"); /* Reset color */
-    va_end(ap);
-}
+
+#define _m_report_failure(value, comment, ...)       \
+    do {                                             \
+        ++_m_failure_count;                          \
+        _m_msg(_M_RED, "- failure: ");               \
+        _m_msg(_M_RED, comment, ##__VA_ARGS__);      \
+        _m_msg(_M_RED, "\n     code: %s\n", #value); \
+        _m_msg(_M_RED, "\n");                        \
+    } while(0)
+
+
+#define _m_report_pending(comment, ...)     \
+    do {                                           \
+        ++_m_pending_count;                        \
+        _m_msg(_M_YELLOW, "- pending: ");          \
+        _m_msg(_M_YELLOW, comment, ##__VA_ARGS__); \
+        _m_msg(_M_YELLOW, "\n");                   \
+    } while(0)
 
 
 #define suite(suite_name)                  \
@@ -56,36 +63,27 @@ void message_pending(const char *format, ...)
         printf("start: %s\n", suite_name);
 
 #define endsuite                                       \
-        if (_m_succeed_count > 0)                      \
-            printf("Succeed: %d\n", _m_succeed_count); \
-        if (_m_failed_count > 0)                       \
-            printf("Failed: %d\n", _m_failed_count);   \
+        if (_m_success_count > 0)                      \
+            printf("Succeed: %d\n", _m_success_count); \
+        if (_m_failure_count > 0)                      \
+            printf("Failed: %d\n", _m_failure_count);  \
         if (_m_pending_count > 0)                      \
             printf("Pending: %d\n", _m_pending_count); \
-        return _m_failed_count;                        \
+        return _m_failure_count;                       \
     }
 
-#define assert0(value, comment, ...)                      \
-    do {                                                  \
-        if ((value) == 0) {                               \
-            message_success("- success: ");               \
-            message_success(comment, ##__VA_ARGS__);      \
-            message_success("\n");                        \
-            ++_m_succeed_count;                           \
-        } else {                                          \
-            message_failure("- failure: ");               \
-            message_failure(comment, ##__VA_ARGS__);      \
-            message_failure("\n     code: %s\n", #value); \
-            ++_m_failed_count;                            \
-        }                                                 \
+#define assert0(value, comment, ...)                          \
+    do {                                                      \
+        if ((value) == 0) {                                   \
+            _m_report_success(value, comment, ##__VA_ARGS__); \
+        } else {                                              \
+            _m_report_failure(value, comment, ##__VA_ARGS__); \
+        }                                                     \
     } while(0)
 
-#define pending(comment, ...)                    \
-    do {                                         \
-        message_pending("- pending: ");          \
-        message_pending(comment, ##__VA_ARGS__); \
-        message_pending("\n");                   \
-        ++_m_pending_count;                      \
+#define pending(comment, ...)                      \
+    do {                                           \
+        _m_report_pending(comment, ##__VA_ARGS__); \
     } while(0)
 
 

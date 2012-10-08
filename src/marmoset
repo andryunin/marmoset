@@ -64,7 +64,7 @@ function error {
 #         $2 - result file path
 # Return: compiler exit status
 function test_compile {
-    $CC $CFLAGS -DMARMOSET=\"$MARMOSET_C\" -DMARMOSET_FILENAME=\"$1\" $1 -o $2
+    $CC $1 -o $2 $CFLAGS -DMARMOSET=\"$MARMOSET_C\" -DMARMOSET_FILENAME=\"$1\" 
     return $?
 }
 

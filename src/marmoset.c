@@ -67,8 +67,9 @@ void _m_msg_indent()
         _m_msg_indent();                                             \
         _m_msg(_M_RED, "- failure: ");                               \
         _m_msg(_M_RED, comment, ##__VA_ARGS__);                      \
+        _m_msg(_M_RED, "\n");                                        \
         _m_msg_indent();                                             \
-        _m_msg(_M_RED, "\n     code: (%s) %s", #value, assert_mark); \
+        _m_msg(_M_RED, "     code: (%s) %s", #value, assert_mark);   \
         _m_msg(_M_RED, "\n");                                        \
     } while(0)
 

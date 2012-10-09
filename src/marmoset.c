@@ -100,8 +100,8 @@ void _m_nesting_push(const char *comment, ...)
     struct _m_nesting_level *l;
     va_list ap;
 
-    l          = _m_xalloc(sizeof(struct _m_nesting_level));
-    l->comment = _m_xalloc(sizeof(char) * _M_COMMENT_SIZE);
+    l          = (struct _m_nesting_level *) _m_xalloc(sizeof(struct _m_nesting_level));
+    l->comment = (char *) _m_xalloc(sizeof(char) * _M_COMMENT_SIZE);
     l->prev    = _m_nesting_head;
 
     _m_nesting_head = l;
